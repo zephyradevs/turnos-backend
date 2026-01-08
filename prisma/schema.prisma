@@ -1,0 +1,41 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                          String    @id @default(uuid()) @db.Uuid
+  
+  // Credenciales de acceso
+  email                       String    @unique @db.VarChar(255)
+  passwordHash                String    @map("password_hash") @db.VarChar(255)
+  
+  // Información personal básica
+  name                        String    @db.VarChar(255)
+  
+  // Sistema de verificación de email
+  emailVerified               Boolean   @default(false) @map("email_verified")
+  emailVerificationToken      String?   @map("email_verification_token") @db.VarChar(255)
+  emailVerificationExpiresAt  DateTime? @map("email_verification_expires_at") @db.Timestamptz()
+  
+  // Sistema de recuperación de contraseña
+  passwordResetToken          String?   @map("password_reset_token") @db.VarChar(255)
+  passwordResetExpiresAt      DateTime? @map("password_reset_expires_at") @db.Timestamptz()
+  
+  // Auditoría y tracking
+  lastLogin                   DateTime? @map("last_login") @db.Timestamptz()
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([email])
+  @@index([emailVerificationToken])
+  @@index([passwordResetToken])
+  @@map("users")
+}

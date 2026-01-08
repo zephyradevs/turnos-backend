@@ -1,0 +1,22 @@
+# Dependencies
+node_modules
+package-lock.json
+yarn.lock
+
+# Build output
+dist
+build
+
+# Environment
+.env
+.env.*
+
+# Prisma
+prisma/migrations
+
+# Logs
+*.log
+
+# IDE
+.vscode
+.idea
