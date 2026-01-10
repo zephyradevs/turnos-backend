@@ -22,7 +22,7 @@ model User {
   
   // Sistema de verificación de email
   emailVerified               Boolean   @default(false) @map("email_verified")
-  emailVerificationToken      String?   @map("email_verification_token") @db.VarChar(255)
+  emailVerificationCode       String?   @map("email_verification_code") @db.VarChar(6)
   emailVerificationExpiresAt  DateTime? @map("email_verification_expires_at") @db.Timestamptz()
   
   // Sistema de recuperación de contraseña
@@ -35,7 +35,7 @@ model User {
   updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@index([email])
-  @@index([emailVerificationToken])
+  @@index([emailVerificationCode])
   @@index([passwordResetToken])
   @@map("users")
 }

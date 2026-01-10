@@ -9,9 +9,9 @@ export const errorHandler = (
     console.error('Error:', err);
 
     res.status(500).json({
-        success: false,
+        status: 'error',
         message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+        data: process.env.NODE_ENV === 'development' ? err.message : undefined,
     });
 };
 
@@ -21,8 +21,8 @@ export const notFoundHandler = (
     _next: NextFunction
 ): void => {
     res.status(404).json({
-        success: false,
+        status: 'error',
         message: 'Route not found',
-        path: req.originalUrl,
+        data: { path: req.originalUrl },
     });
 };
