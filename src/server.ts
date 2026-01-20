@@ -1,13 +1,17 @@
 import app from './app';
-import { config } from './config/env';
-import { Logger } from './utils/logger';
 import prisma from './config/database';
+import { config } from './config/env';
+import { connectRedis } from './config/redis';
+import { Logger } from './utils/logger';
 
 const startServer = async (): Promise<void> => {
     try {
         // Test database connection
         await prisma.$connect();
         Logger.info('Database connected successfully');
+
+        // Connect to Redis
+        await connectRedis();
 
         // Start server
         app.listen(config.port, () => {
