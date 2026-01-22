@@ -34,8 +34,211 @@ model User {
   createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
 
+  // Relaciones
+  business                    Business?
+
   @@index([email])
   @@index([emailVerificationCode])
   @@index([passwordResetToken])
   @@map("users")
+}
+
+// ==========================================
+// CONFIGURACIÓN DEL NEGOCIO
+// ==========================================
+
+model Business {
+  id                          String    @id @default(uuid()) @db.Uuid
+  userId                      String    @unique @map("user_id") @db.Uuid
+  
+  // Información del negocio
+  name                        String    @db.VarChar(255)
+  adminName                   String    @map("admin_name") @db.VarChar(255)
+  phone                       String    @db.VarChar(50)
+  address                     String    @db.VarChar(500)
+  city                        String    @db.VarChar(100)
+  province                    String    @db.VarChar(100)
+  logo                        String?   @db.VarChar(500)
+  
+  // Configuración de horarios globales
+  useIndividualSchedule       Boolean   @default(false) @map("use_individual_schedule")
+  useIndividualProfessionalSchedule Boolean @default(false) @map("use_individual_professional_schedule")
+  globalOpenTime              String?   @map("global_open_time") @db.VarChar(5)
+  globalCloseTime             String?   @map("global_close_time") @db.VarChar(5)
+  globalDuration              Int?      @map("global_duration")
+  
+  // Auditoría
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  
+  // Relaciones
+  user                        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  professionals               Professional[]
+  operatingHours              OperatingHours[]
+  services                    Service[]
+  bookingPreferences          BookingPreferences?
+  communicationSettings       CommunicationSettings?
+
+  @@index([userId])
+  @@map("businesses")
+}
+
+model Professional {
+  id                          String    @id @default(uuid()) @db.Uuid
+  businessId                  String    @map("business_id") @db.Uuid
+  externalId                  String    @map("external_id") @db.VarChar(50) // ID del frontend
+  
+  // Información personal
+  firstName                   String    @map("first_name") @db.VarChar(100)
+  lastName                    String    @map("last_name") @db.VarChar(100)
+  birthDate                   DateTime  @map("birth_date") @db.Date
+  dni                         String    @db.VarChar(20)
+  description                 String?   @db.Text
+  
+  // Configuración de horarios individuales
+  useIndividualSchedule       Boolean   @default(false) @map("use_individual_schedule")
+  globalOpenTime              String?   @map("global_open_time") @db.VarChar(5)
+  globalCloseTime             String?   @map("global_close_time") @db.VarChar(5)
+  globalDuration              Int?      @map("global_duration")
+  
+  // Auditoría
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  
+  // Relaciones
+  business                    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  schedules                   ProfessionalSchedule[]
+  services                    ServiceProfessional[]
+
+  @@unique([businessId, externalId])
+  @@unique([businessId, dni])
+  @@index([businessId])
+  @@map("professionals")
+}
+
+model OperatingHours {
+  id                          String    @id @default(uuid()) @db.Uuid
+  businessId                  String    @map("business_id") @db.Uuid
+  
+  // Día de la semana (monday, tuesday, etc.)
+  dayOfWeek                   String    @map("day_of_week") @db.VarChar(10)
+  enabled                     Boolean   @default(true)
+  openTime                    String    @map("open_time") @db.VarChar(5)
+  closeTime                   String    @map("close_time") @db.VarChar(5)
+  duration                    Int       // Duración del turno en minutos
+  
+  // Auditoría
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  
+  // Relaciones
+  business                    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, dayOfWeek])
+  @@index([businessId])
+  @@map("operating_hours")
+}
+
+model ProfessionalSchedule {
+  id                          String    @id @default(uuid()) @db.Uuid
+  professionalId              String    @map("professional_id") @db.Uuid
+  
+  // Día de la semana (monday, tuesday, etc.)
+  dayOfWeek                   String    @map("day_of_week") @db.VarChar(10)
+  enabled                     Boolean   @default(true)
+  openTime                    String    @map("open_time") @db.VarChar(5)
+  closeTime                   String    @map("close_time") @db.VarChar(5)
+  duration                    Int       // Duración del turno en minutos
+  
+  // Auditoría
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  
+  // Relaciones
+  professional                Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@unique([professionalId, dayOfWeek])
+  @@index([professionalId])
+  @@map("professional_schedules")
+}
+
+model Service {
+  id                          String    @id @default(uuid()) @db.Uuid
+  businessId                  String    @map("business_id") @db.Uuid
+  externalId                  String    @map("external_id") @db.VarChar(50) // ID del frontend
+  
+  // Información del servicio
+  name                        String    @db.VarChar(255)
+  duration                    Int       // Duración en minutos
+  price                       Decimal?  @db.Decimal(10, 2)
+  
+  // Auditoría
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  
+  // Relaciones
+  business                    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  professionals               ServiceProfessional[]
+
+  @@unique([businessId, externalId])
+  @@index([businessId])
+  @@map("services")
+}
+
+model ServiceProfessional {
+  id                          String    @id @default(uuid()) @db.Uuid
+  serviceId                   String    @map("service_id") @db.Uuid
+  professionalId              String    @map("professional_id") @db.Uuid
+  
+  // Auditoría
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  
+  // Relaciones
+  service                     Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  professional                Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, professionalId])
+  @@index([serviceId])
+  @@index([professionalId])
+  @@map("service_professionals")
+}
+
+model BookingPreferences {
+  id                          String    @id @default(uuid()) @db.Uuid
+  businessId                  String    @unique @map("business_id") @db.Uuid
+  
+  // Configuración de reservas
+  allowCancellation           Boolean   @default(true) @map("allow_cancellation")
+  hoursBeforeBooking          Int       @default(24) @map("hours_before_booking")
+  maxDaysAhead                Int       @default(30) @map("max_days_ahead")
+  
+  // Auditoría
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  
+  // Relaciones
+  business                    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@map("booking_preferences")
+}
+
+model CommunicationSettings {
+  id                          String    @id @default(uuid()) @db.Uuid
+  businessId                  String    @unique @map("business_id") @db.Uuid
+  
+  // Configuración de comunicación
+  sendConfirmationEmail       Boolean   @default(true) @map("send_confirmation_email")
+  sendReminderEmail           Boolean   @default(true) @map("send_reminder_email")
+  reminderHoursBefore         Int       @default(24) @map("reminder_hours_before")
+  
+  // Auditoría
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  
+  // Relaciones
+  business                    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@map("communication_settings")
 }
