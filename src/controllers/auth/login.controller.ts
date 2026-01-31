@@ -38,6 +38,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
                     lastLogin: result.user.lastLogin,
                 },
                 token: result.token,
+                setupPending: result.setupStatus.setupPending,
+                missingSteps: result.setupStatus.missingSteps,
+                setupDetails: result.setupStatus.details,
             },
         });
     } catch (error) {
