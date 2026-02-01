@@ -78,6 +78,8 @@ model Business {
   services                    Service[]
   bookingPreferences          BookingPreferences?
   communicationSettings       CommunicationSettings?
+  clients                     Client[]
+  appointments                Appointment[]
 
   @@index([userId])
   @@map("businesses")
@@ -109,6 +111,7 @@ model Professional {
   business                    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   schedules                   ProfessionalSchedule[]
   services                    ServiceProfessional[]
+  appointments                Appointment[]
 
   @@unique([businessId, externalId])
   @@unique([businessId, dni])
@@ -179,6 +182,7 @@ model Service {
   // Relaciones
   business                    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   professionals               ServiceProfessional[]
+  appointments                Appointment[]
 
   @@unique([businessId, externalId])
   @@index([businessId])
@@ -241,4 +245,98 @@ model CommunicationSettings {
 
   @@index([businessId])
   @@map("communication_settings")
+}
+
+// ==========================================
+// CLIENTES
+// ==========================================
+
+model Client {
+  id                          String    @id @default(uuid()) @db.Uuid
+  businessId                  String    @map("business_id") @db.Uuid
+  
+  // Información del cliente
+  name                        String    @db.VarChar(255)
+  email                       String?   @db.VarChar(255)
+  phone                       String?   @db.VarChar(50)
+  
+  // Auditoría
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  
+  // Relaciones
+  business                    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointments                Appointment[]
+
+  @@unique([businessId, email])
+  @@index([businessId])
+  @@index([email])
+  @@map("clients")
+}
+
+// ==========================================
+// TURNOS / CITAS
+// ==========================================
+
+model Appointment {
+  id                          String    @id @default(uuid()) @db.Uuid
+  businessId                  String    @map("business_id") @db.Uuid
+  clientId                    String    @map("client_id") @db.Uuid
+  professionalId              String    @map("professional_id") @db.Uuid
+  serviceId                   String    @map("service_id") @db.Uuid
+  
+  // Fecha y hora del turno
+  date                        DateTime  @db.Date
+  startTime                   String    @map("start_time") @db.VarChar(5) // Formato HH:mm
+  endTime                     String    @map("end_time") @db.VarChar(5)   // Formato HH:mm
+  
+  // Duración en minutos (desnormalizado para consultas rápidas)
+  duration                    Int
+  
+  // Precio al momento de la reserva (desnormalizado por si cambia el precio del servicio)
+  price                       Decimal?  @db.Decimal(10, 2)
+  
+  // Estado del turno
+  status                      AppointmentStatus @default(PENDING)
+  
+  // Notas adicionales
+  notes                       String?   @db.Text
+  
+  // Historial de cambios (para auditoría)
+  cancelledAt                 DateTime? @map("cancelled_at") @db.Timestamptz()
+  cancelledReason             String?   @map("cancelled_reason") @db.Text
+  completedAt                 DateTime? @map("completed_at") @db.Timestamptz()
+  
+  // Notificaciones
+  confirmationEmailSent       Boolean   @default(false) @map("confirmation_email_sent")
+  reminderEmailSent           Boolean   @default(false) @map("reminder_email_sent")
+  
+  // Auditoría
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  
+  // Relaciones
+  business                    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client                      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  professional                Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  service                     Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([professionalId])
+  @@index([serviceId])
+  @@index([date])
+  @@index([status])
+  @@index([businessId, date])
+  @@index([professionalId, date])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  PENDING     // Pendiente de confirmación
+  CONFIRMED   // Confirmado
+  IN_PROGRESS // En progreso
+  COMPLETED   // Completado
+  CANCELLED   // Cancelado
+  NO_SHOW     // Cliente no asistió
 }
