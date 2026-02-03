@@ -68,8 +68,33 @@ export async function checkBusinessSetupStatus(
   const hasProfessionals = business.professionals.length > 0;
 
   // Verificar si hay al menos un profesional con horarios configurados
+  // Un profesional tiene horarios si:
+  // 1. Tiene schedules individuales configurados, O
+  // 2. Usa horarios globales del negocio (useIndividualSchedule = false y hay operatingHours), O
+  // 3. Tiene configurados sus propios horarios globales (globalOpenTime, globalCloseTime, globalDuration)
   const hasProfessionalSchedules = business.professionals.some(
-    (professional: any) => professional.schedules.length > 0,
+    (professional: any) => {
+      // Tiene schedules individuales
+      if (professional.schedules.length > 0) {
+        return true;
+      }
+      
+      // No usa horarios individuales y hay horarios del negocio disponibles
+      if (!professional.useIndividualSchedule && hasOperatingHours) {
+        return true;
+      }
+      
+      // Tiene configurados sus propios horarios globales
+      if (
+        professional.globalOpenTime &&
+        professional.globalCloseTime &&
+        professional.globalDuration
+      ) {
+        return true;
+      }
+      
+      return false;
+    },
   );
 
   const hasServices = business.services.length > 0;
