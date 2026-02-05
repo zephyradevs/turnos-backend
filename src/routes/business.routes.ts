@@ -1,6 +1,10 @@
-import { Router } from 'express';
-import { getConfiguration, saveConfiguration } from '../controllers/business/configuration.controller';
-import { authMiddleware } from '../middlewares/auth.middleware';
+import { Router } from "express";
+import {
+  getConfiguration,
+  getCompleteConfiguration,
+  saveConfiguration,
+} from "../controllers/business/configuration.controller";
+import { authMiddleware } from "../middlewares/auth.middleware";
 
 const router = Router();
 
@@ -8,7 +12,8 @@ const router = Router();
 router.use(authMiddleware);
 
 // Configuración del negocio
-router.post('/configuration', saveConfiguration);
-router.get('/configuration', getConfiguration);
+router.post("/configuration", saveConfiguration);
+router.get("/configuration", getConfiguration);
+router.get("/configuration/complete", getCompleteConfiguration);
 
 export default router;

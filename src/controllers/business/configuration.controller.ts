@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { getBusinessConfiguration } from "../../services/business/get-business-configuration.service";
 import { saveBusinessConfiguration } from "../../services/business/save-business-configuration.service";
+import { getCompleteBusinessConfiguration } from "../../services/business/get-complete-configuration.service";
 import { BusinessConfigurationDTO } from "../../types/business.types";
 import { Logger } from "../../utils/logger";
 
@@ -156,6 +157,57 @@ export const getConfiguration = async (
     res.status(500).json({
       status: "error",
       message: "Error interno al obtener la configuración del negocio",
+    });
+  }
+};
+
+/**
+ * Obtener la configuración completa del negocio con todos los detalles
+ * Esta ruta devuelve toda la información necesaria para el frontend:
+ * - Información del negocio
+ * - Profesionales con sus horarios individuales
+ * - Servicios con los profesionales asignados
+ * - Horarios de operación del negocio
+ * - Preferencias de reserva
+ * - Configuración de comunicación
+ *
+ * GET /api/business/configuration/complete
+ */
+export const getCompleteConfiguration = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({
+        status: "error",
+        message: "Usuario no autenticado",
+      });
+      return;
+    }
+
+    const configuration = await getCompleteBusinessConfiguration(userId);
+
+    if (!configuration) {
+      res.status(404).json({
+        status: "error",
+        message: "No se encontró configuración del negocio para este usuario",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Configuración completa del negocio obtenida exitosamente",
+      data: configuration,
+    });
+  } catch (error) {
+    Logger.error("Error al obtener configuración completa del negocio:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Error interno al obtener la configuración completa del negocio",
     });
   }
 };
