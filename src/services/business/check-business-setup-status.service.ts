@@ -78,12 +78,12 @@ export async function checkBusinessSetupStatus(
       if (professional.schedules.length > 0) {
         return true;
       }
-      
+
       // No usa horarios individuales y hay horarios del negocio disponibles
       if (!professional.useIndividualSchedule && hasOperatingHours) {
         return true;
       }
-      
+
       // Tiene configurados sus propios horarios globales
       if (
         professional.globalOpenTime &&
@@ -92,7 +92,7 @@ export async function checkBusinessSetupStatus(
       ) {
         return true;
       }
-      
+
       return false;
     },
   );

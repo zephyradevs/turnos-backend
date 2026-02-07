@@ -214,6 +214,23 @@ export async function getTodayDashboard(
     .sort((a, b) => a.minutesUntil - b.minutesUntil);
 
   // ========================================
+  // CALCULAR DÍA DE LA SEMANA Y HORARIOS
+  // ========================================
+  const dayOfWeek = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ][currentTime.getDay()];
+
+  const todayOperatingHours = operatingHours.find(
+    (oh) => oh.dayOfWeek === dayOfWeek && oh.enabled,
+  );
+
+  // ========================================
   // CALCULAR ESTADÍSTICAS DEL DÍA
   // ========================================
   const pastAppointments = appointmentDTOs.filter((apt) => {
@@ -243,9 +260,24 @@ export async function getTodayDashboard(
     0,
   );
 
-  // Calcular tasa de ocupación
-  // Asumiendo horario estándar de 9 horas con slots de 30 minutos
-  const totalSlots = 9 * 2 * professionals.length; // 9 horas * 2 slots/hora * profesionales
+  // Calcular tasa de ocupación basada en horarios reales
+  const workingMinutes = (() => {
+    if (!todayOperatingHours && !business.globalOpenTime) return 540; // 9 horas por defecto
+
+    const open =
+      todayOperatingHours?.openTime || business.globalOpenTime || "09:00";
+    const close =
+      todayOperatingHours?.closeTime || business.globalCloseTime || "18:00";
+
+    const [openHour, openMin] = open.split(":").map(Number);
+    const [closeHour, closeMin] = close.split(":").map(Number);
+
+    return closeHour * 60 + closeMin - (openHour * 60 + openMin);
+  })();
+
+  const averageSlotDuration = todayOperatingHours?.duration || 30;
+  const totalSlots =
+    Math.floor(workingMinutes / averageSlotDuration) * professionals.length;
   const occupiedSlots = appointmentDTOs.filter(
     (a) => a.status !== "cancelled",
   ).length;
@@ -338,20 +370,6 @@ export async function getTodayDashboard(
   // ========================================
   // HORARIOS DEL NEGOCIO
   // ========================================
-  const dayOfWeek = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-  ][currentTime.getDay()];
-
-  const todayOperatingHours = operatingHours.find(
-    (oh) => oh.dayOfWeek === dayOfWeek && oh.enabled,
-  );
-
   const openTime =
     todayOperatingHours?.openTime || business.globalOpenTime || "09:00";
   const closeTime =
