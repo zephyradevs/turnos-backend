@@ -2,6 +2,7 @@ import { Router } from "express";
 import authRoutes from "./auth.routes";
 import businessRoutes from "./business.routes";
 import appointmentRoutes from "./appointment.routes";
+import clientRoutes from "./client.routes";
 import dashboardRoutes from "./dashboard.routes";
 
 const router = Router();
@@ -10,6 +11,7 @@ const router = Router();
 router.use("/auth", authRoutes);
 router.use("/business", businessRoutes);
 router.use("/appointments", appointmentRoutes);
+router.use("/clients", clientRoutes);
 router.use("/dashboard", dashboardRoutes);
 
 // Health check
