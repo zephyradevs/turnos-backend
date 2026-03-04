@@ -33,9 +33,10 @@ export async function getClients(
   const limit = Math.min(100, Math.max(1, filters.limit ?? DEFAULT_LIMIT));
   const skip = (page - 1) * limit;
 
-  // Filtro base: solo clientes del negocio
+  // Filtro base: solo clientes activos del negocio (excluir borrados lógicos)
   const where: Prisma.ClientWhereInput = {
     businessId: business.id,
+    deletedAt: null,
   };
 
   // Búsqueda por nombre o email (case-insensitive)

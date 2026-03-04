@@ -76,3 +76,104 @@ export interface PaginatedClientsDTO {
     totalPages: number;
   };
 }
+
+// ==========================================
+// DTOs para historial de cliente
+// ==========================================
+
+/**
+ * DTO de un turno detallado en el historial del cliente
+ */
+export interface ClientHistoryAppointmentDTO {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  price: number | null;
+  status: AppointmentStatus;
+  notes: string | null;
+  cancelledAt: string | null;
+  cancelledReason: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  service: {
+    id: string;
+    name: string;
+    duration: number;
+    price: number | null;
+  };
+  professional: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+/**
+ * Resumen estadístico del historial del cliente
+ */
+export interface ClientHistorySummaryDTO {
+  totalAppointments: number;
+  completedAppointments: number;
+  cancelledAppointments: number;
+  noShowAppointments: number;
+  upcomingAppointments: number;
+  totalSpent: number;
+}
+
+/**
+ * Filtros para el historial de turnos de un cliente
+ */
+export interface ClientHistoryFiltersDTO {
+  // Filtro por estado
+  status?: AppointmentStatus;
+
+  // Filtro por rango de fechas
+  dateFrom?: string; // Formato: YYYY-MM-DD
+  dateTo?: string; // Formato: YYYY-MM-DD
+
+  // Paginación
+  page?: number;
+  limit?: number;
+
+  // Ordenamiento
+  sortBy?: "date" | "status" | "price";
+  sortOrder?: "asc" | "desc";
+}
+
+/**
+ * DTO de respuesta del historial completo de un cliente
+ */
+export interface ClientHistoryDTO {
+  client: ClientResponseDTO;
+  summary: ClientHistorySummaryDTO;
+  appointments: ClientHistoryAppointmentDTO[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+// ==========================================
+// DTOs para edición y eliminación de cliente
+// ==========================================
+
+/**
+ * DTO para actualizar los datos de un cliente
+ */
+export interface UpdateClientDTO {
+  name?: string;
+  email?: string | null;
+  phone?: string | null;
+}
+
+/**
+ * DTO de respuesta tras eliminar (borrado lógico) un cliente
+ */
+export interface DeleteClientResponseDTO {
+  id: string;
+  deletedAt: string;
+}

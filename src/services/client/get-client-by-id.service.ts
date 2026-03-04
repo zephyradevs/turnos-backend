@@ -30,6 +30,7 @@ export async function getClientById(
     where: {
       id: clientId,
       businessId: business.id,
+      deletedAt: null,
     },
     select: {
       id: true,

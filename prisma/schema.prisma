@@ -260,6 +260,9 @@ model Client {
   email                       String?   @db.VarChar(255)
   phone                       String?   @db.VarChar(50)
   
+  // Borrado lógico
+  deletedAt                   DateTime? @map("deleted_at") @db.Timestamptz()
+  
   // Auditoría
   createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
@@ -271,6 +274,7 @@ model Client {
   @@unique([businessId, email])
   @@index([businessId])
   @@index([email])
+  @@index([deletedAt])
   @@map("clients")
 }
 
