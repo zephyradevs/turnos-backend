@@ -3,6 +3,27 @@
 // ==========================================
 
 /**
+ * Tipos de registro en la agenda
+ */
+export type AppointmentType = "appointment" | "block";
+
+/**
+ * Mapeo de tipos del frontend a tipos de Prisma
+ */
+export const APPOINTMENT_TYPE_MAP: Record<AppointmentType, string> = {
+  appointment: "APPOINTMENT",
+  block: "BLOCK",
+};
+
+/**
+ * Mapeo inverso de tipos de Prisma a tipos del frontend
+ */
+export const PRISMA_TYPE_MAP: Record<string, AppointmentType> = {
+  APPOINTMENT: "appointment",
+  BLOCK: "block",
+};
+
+/**
  * Estados posibles de un turno
  */
 export type AppointmentStatus =
@@ -50,19 +71,26 @@ export interface AppointmentClientDTO {
  * DTO para crear un nuevo turno
  */
 export interface CreateAppointmentDTO {
-  // Datos del cliente
-  clientName: string;
+  // Tipo de registro (por defecto 'appointment')
+  type?: AppointmentType;
+
+  // Datos del cliente (requeridos solo para type 'appointment')
+  clientName?: string;
   clientEmail?: string;
   clientPhone?: string;
 
   // IDs de relaciones (externalId del frontend)
-  serviceId: string;
+  // serviceId es requerido solo para type 'appointment'
+  serviceId?: string;
   professionalId: string;
 
   // Fecha y hora
   date: string; // Formato: YYYY-MM-DD
   startTime: string; // Formato: HH:mm
   endTime: string; // Formato: HH:mm
+
+  // Duración manual (para bloqueos sin servicio)
+  duration?: number;
 
   // Opcionales
   notes?: string;
@@ -101,22 +129,25 @@ export interface UpdateAppointmentDTO {
 export interface AppointmentResponseDTO {
   id: string;
 
-  // Información del cliente
+  // Tipo de registro
+  type: AppointmentType;
+
+  // Información del cliente (null para bloqueos)
   client: {
     id: string;
     name: string;
     email: string | null;
     phone: string | null;
-  };
+  } | null;
 
-  // Información del servicio
+  // Información del servicio (null para bloqueos)
   service: {
     id: string;
     externalId: string;
     name: string;
     duration: number;
     price: number | null;
-  };
+  } | null;
 
   // Información del profesional
   professional: {

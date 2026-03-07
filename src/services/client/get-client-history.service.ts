@@ -280,10 +280,10 @@ function toAppointmentDTO(
     completedAt: appointment.completedAt?.toISOString() ?? null,
     createdAt: appointment.createdAt.toISOString(),
     service: {
-      id: appointment.service.id,
-      name: appointment.service.name,
-      duration: appointment.service.duration,
-      price: appointment.service.price
+      id: appointment.service?.id ?? "",
+      name: appointment.service?.name ?? "",
+      duration: appointment.service?.duration ?? 0,
+      price: appointment.service?.price
         ? Number(appointment.service.price)
         : null,
     },

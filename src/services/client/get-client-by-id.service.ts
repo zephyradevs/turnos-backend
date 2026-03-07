@@ -122,10 +122,10 @@ function toAppointmentDTO(
     endTime: appointment.endTime,
     status: PRISMA_STATUS_MAP[appointment.status] || "pending",
     service: {
-      id: appointment.service.id,
-      name: appointment.service.name,
-      duration: appointment.service.duration,
-      price: appointment.service.price
+      id: appointment.service?.id ?? "",
+      name: appointment.service?.name ?? "",
+      duration: appointment.service?.duration ?? 0,
+      price: appointment.service?.price
         ? Number(appointment.service.price)
         : null,
     },

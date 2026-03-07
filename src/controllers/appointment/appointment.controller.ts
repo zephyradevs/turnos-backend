@@ -14,6 +14,7 @@ import {
   CreateAppointmentDTO,
   UpdateAppointmentDTO,
   AppointmentFiltersDTO,
+  AppointmentType,
   isValidTimeFormat,
   isValidDateFormat,
 } from "../../types/appointment.types";
@@ -36,24 +37,18 @@ export const create = async (req: Request, res: Response): Promise<void> => {
     }
 
     const appointmentData: CreateAppointmentDTO = req.body;
+    const appointmentType: AppointmentType = appointmentData.type || "appointment";
 
-    // Validaciones
-    if (!appointmentData.clientName?.trim()) {
+    // Validar tipo si viene explícito
+    if (appointmentData.type && !["appointment", "block"].includes(appointmentData.type)) {
       res.status(400).json({
         status: "error",
-        message: "El nombre del cliente es requerido",
+        message: "El tipo debe ser 'appointment' o 'block'",
       });
       return;
     }
 
-    if (!appointmentData.serviceId) {
-      res.status(400).json({
-        status: "error",
-        message: "El servicio es requerido",
-      });
-      return;
-    }
-
+    // Validaciones comunes (profesional, fecha y hora siempre requeridos)
     if (!appointmentData.professionalId) {
       res.status(400).json({
         status: "error",
@@ -92,23 +87,54 @@ export const create = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Validar email si se proporciona
-    if (
-      appointmentData.clientEmail &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(appointmentData.clientEmail)
-    ) {
-      res.status(400).json({
-        status: "error",
-        message: "El email del cliente no es válido",
-      });
-      return;
+    // Validaciones condicionales según tipo
+    if (appointmentType === "appointment") {
+      // Para turnos normales: cliente y servicio requeridos
+      if (!appointmentData.clientName?.trim()) {
+        res.status(400).json({
+          status: "error",
+          message: "El nombre del cliente es requerido",
+        });
+        return;
+      }
+
+      if (!appointmentData.serviceId) {
+        res.status(400).json({
+          status: "error",
+          message: "El servicio es requerido",
+        });
+        return;
+      }
+
+      // Validar email si se proporciona
+      if (
+        appointmentData.clientEmail &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(appointmentData.clientEmail)
+      ) {
+        res.status(400).json({
+          status: "error",
+          message: "El email del cliente no es válido",
+        });
+        return;
+      }
+    } else if (appointmentType === "block") {
+      // Para bloqueos: endTime es obligatorio
+      if (!appointmentData.endTime) {
+        res.status(400).json({
+          status: "error",
+          message: "La hora de fin es requerida para bloqueos de horario",
+        });
+        return;
+      }
     }
 
     const result = await createAppointment(userId, appointmentData);
 
     res.status(201).json({
       status: "success",
-      message: "Turno creado exitosamente",
+      message: appointmentData.type === "block"
+        ? "Bloqueo de horario creado exitosamente"
+        : "Turno creado exitosamente",
       data: {
         appointment: result.appointment,
         isNewClient: result.isNewClient,
@@ -148,6 +174,25 @@ export const create = async (req: Request, res: Response): Promise<void> => {
             status: "error",
             message:
               "El horario seleccionado no está disponible para este profesional",
+          });
+          return;
+        case "CLIENT_NAME_REQUIRED":
+          res.status(400).json({
+            status: "error",
+            message: "El nombre del cliente es requerido para turnos",
+          });
+          return;
+        case "SERVICE_REQUIRED":
+          res.status(400).json({
+            status: "error",
+            message: "El servicio es requerido para turnos",
+          });
+          return;
+        case "BLOCK_END_TIME_REQUIRED":
+          res.status(400).json({
+            status: "error",
+            message:
+              "La hora de fin es requerida para bloqueos de horario",
           });
           return;
       }

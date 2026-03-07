@@ -9,7 +9,7 @@ import {
   BusinessHoursDTO,
 } from "../../types/dashboard.types";
 import { AppointmentResponseDTO } from "../../types/appointment.types";
-import { PRISMA_STATUS_MAP } from "../../types/appointment.types";
+import { PRISMA_STATUS_MAP, PRISMA_TYPE_MAP } from "../../types/appointment.types";
 import { Logger } from "../../utils/logger";
 
 /**
@@ -43,21 +43,26 @@ function toResponseDTO(
 ): AppointmentResponseDTO {
   return {
     id: appointment.id,
-    client: {
-      id: appointment.client.id,
-      name: appointment.client.name,
-      email: appointment.client.email,
-      phone: appointment.client.phone,
-    },
-    service: {
-      id: appointment.service.id,
-      externalId: appointment.service.externalId,
-      name: appointment.service.name,
-      duration: appointment.service.duration,
-      price: appointment.service.price
-        ? Number(appointment.service.price)
-        : null,
-    },
+    type: PRISMA_TYPE_MAP[appointment.type] || "appointment",
+    client: appointment.client
+      ? {
+          id: appointment.client.id,
+          name: appointment.client.name,
+          email: appointment.client.email,
+          phone: appointment.client.phone,
+        }
+      : null,
+    service: appointment.service
+      ? {
+          id: appointment.service.id,
+          externalId: appointment.service.externalId,
+          name: appointment.service.name,
+          duration: appointment.service.duration,
+          price: appointment.service.price
+            ? Number(appointment.service.price)
+            : null,
+        }
+      : null,
     professional: {
       id: appointment.professional.id,
       externalId: appointment.professional.externalId,
@@ -233,30 +238,35 @@ export async function getTodayDashboard(
   // ========================================
   // CALCULAR ESTADÍSTICAS DEL DÍA
   // ========================================
-  const pastAppointments = appointmentDTOs.filter((apt) => {
+  // Filtrar solo turnos normales (excluir bloqueos de horario) para estadísticas
+  const appointmentOnlyDTOs = appointmentDTOs.filter(
+    (a) => a.type === "appointment",
+  );
+
+  const pastAppointments = appointmentOnlyDTOs.filter((apt) => {
     const aptEndTime = parseDateTime(apt.date, apt.endTime);
     return aptEndTime < currentTime && apt.status !== "cancelled";
   });
 
   const dayStats: DayStatsDTO = {
-    totalAppointments: appointmentDTOs.length,
-    confirmed: appointmentDTOs.filter((a) => a.status === "confirmed").length,
-    pending: appointmentDTOs.filter((a) => a.status === "pending").length,
-    completed: appointmentDTOs.filter((a) => a.status === "completed").length,
-    cancelled: appointmentDTOs.filter((a) => a.status === "cancelled").length,
+    totalAppointments: appointmentOnlyDTOs.length,
+    confirmed: appointmentOnlyDTOs.filter((a) => a.status === "confirmed").length,
+    pending: appointmentOnlyDTOs.filter((a) => a.status === "pending").length,
+    completed: appointmentOnlyDTOs.filter((a) => a.status === "completed").length,
+    cancelled: appointmentOnlyDTOs.filter((a) => a.status === "cancelled").length,
     totalRevenue: 0,
     collectedRevenue: 0,
     occupancyRate: 0,
   };
 
-  // Calcular ingresos totales del día (solo turnos confirmados y completados)
-  dayStats.totalRevenue = appointmentDTOs
+  // Calcular ingresos totales del día (solo turnos confirmados y completados, sin bloqueos)
+  dayStats.totalRevenue = appointmentOnlyDTOs
     .filter((a) => a.status === "confirmed" || a.status === "completed")
-    .reduce((sum, apt) => sum + (apt.service.price || 0), 0);
+    .reduce((sum, apt) => sum + (apt.service?.price || 0), 0);
 
-  // Calcular ingresos recaudados (turnos que ya pasaron)
+  // Calcular ingresos recaudados (turnos que ya pasaron, sin bloqueos)
   dayStats.collectedRevenue = pastAppointments.reduce(
-    (sum, apt) => sum + (apt.service.price || 0),
+    (sum, apt) => sum + (apt.service?.price || 0),
     0,
   );
 
@@ -278,7 +288,7 @@ export async function getTodayDashboard(
   const averageSlotDuration = todayOperatingHours?.duration || 30;
   const totalSlots =
     Math.floor(workingMinutes / averageSlotDuration) * professionals.length;
-  const occupiedSlots = appointmentDTOs.filter(
+  const occupiedSlots = appointmentOnlyDTOs.filter(
     (a) => a.status !== "cancelled",
   ).length;
   dayStats.occupancyRate =
@@ -289,7 +299,13 @@ export async function getTodayDashboard(
   // ========================================
   const professionalStats: ProfessionalStatsDTO[] = professionals.map(
     (prof) => {
-      const profAppointments = appointmentDTOs.filter(
+      // Para conteo y estadísticas, solo turnos normales (sin bloqueos)
+      const profAppointments = appointmentOnlyDTOs.filter(
+        (a) => a.professional.id === prof.id && a.status !== "cancelled",
+      );
+
+      // Para determinar disponibilidad, considerar también bloqueos
+      const profAllRecords = appointmentDTOs.filter(
         (a) => a.professional.id === prof.id && a.status !== "cancelled",
       );
 
@@ -306,8 +322,8 @@ export async function getTodayDashboard(
             return dateA.getTime() - dateB.getTime();
           })[0] || null;
 
-      // Verificar si está ocupado ahora
-      const currentApt = profAppointments.find((apt) => {
+      // Verificar si está ocupado ahora (considerar bloqueos también)
+      const currentApt = profAllRecords.find((apt) => {
         const startDateTime = parseDateTime(apt.date, apt.startTime);
         const endDateTime = parseDateTime(apt.date, apt.endTime);
         return startDateTime <= currentTime && endDateTime > currentTime;
@@ -331,14 +347,14 @@ export async function getTodayDashboard(
   );
 
   // ========================================
-  // SERVICIOS MÁS POPULARES
+  // SERVICIOS MÁS POPULARES (solo turnos normales, sin bloqueos)
   // ========================================
   const serviceCount: Record<string, number> = {};
 
-  appointmentDTOs
-    .filter((a) => a.status !== "cancelled")
+  appointmentOnlyDTOs
+    .filter((a) => a.status !== "cancelled" && a.service)
     .forEach((apt) => {
-      serviceCount[apt.service.id] = (serviceCount[apt.service.id] || 0) + 1;
+      serviceCount[apt.service!.id] = (serviceCount[apt.service!.id] || 0) + 1;
     });
 
   const total = Object.values(serviceCount).reduce(

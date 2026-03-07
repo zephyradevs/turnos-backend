@@ -9,12 +9,13 @@ import {
   AppointmentResponseDTO,
   APPOINTMENT_STATUS_MAP,
   PRISMA_STATUS_MAP,
+  PRISMA_TYPE_MAP,
   calculateEndTime,
 } from "../../types/appointment.types";
 import { Logger } from "../../utils/logger";
 
 /**
- * Tipo para el turno con todas las relaciones incluidas
+ * Tipo para el turno con todas las relaciones incluidas (nullable para bloqueos)
  */
 type AppointmentWithRelations = Appointment & {
   client: {
@@ -22,14 +23,14 @@ type AppointmentWithRelations = Appointment & {
     name: string;
     email: string | null;
     phone: string | null;
-  };
+  } | null;
   service: {
     id: string;
     externalId: string;
     name: string;
     duration: number;
     price: Prisma.Decimal | null;
-  };
+  } | null;
   professional: {
     id: string;
     externalId: string;
@@ -46,21 +47,26 @@ function toResponseDTO(
 ): AppointmentResponseDTO {
   return {
     id: appointment.id,
-    client: {
-      id: appointment.client.id,
-      name: appointment.client.name,
-      email: appointment.client.email,
-      phone: appointment.client.phone,
-    },
-    service: {
-      id: appointment.service.id,
-      externalId: appointment.service.externalId,
-      name: appointment.service.name,
-      duration: appointment.service.duration,
-      price: appointment.service.price
-        ? Number(appointment.service.price)
-        : null,
-    },
+    type: PRISMA_TYPE_MAP[appointment.type] || "appointment",
+    client: appointment.client
+      ? {
+          id: appointment.client.id,
+          name: appointment.client.name,
+          email: appointment.client.email,
+          phone: appointment.client.phone,
+        }
+      : null,
+    service: appointment.service
+      ? {
+          id: appointment.service.id,
+          externalId: appointment.service.externalId,
+          name: appointment.service.name,
+          duration: appointment.service.duration,
+          price: appointment.service.price
+            ? Number(appointment.service.price)
+            : null,
+        }
+      : null,
     professional: {
       id: appointment.professional.id,
       externalId: appointment.professional.externalId,
@@ -139,8 +145,8 @@ export async function updateAppointment(
     updateData.professional = { connect: { id: professional.id } };
   }
 
-  // Actualizar servicio si cambió
-  let serviceDuration = existingAppointment.service.duration;
+  // Actualizar servicio si cambió (solo para turnos normales)
+  let serviceDuration = existingAppointment.service?.duration ?? existingAppointment.duration;
   if (data.serviceId) {
     const service = await prisma.service.findFirst({
       where: {
@@ -231,8 +237,11 @@ export async function updateAppointment(
     updateData.notes = data.notes || null;
   }
 
-  // Actualizar datos del cliente si es necesario
-  if (data.clientName || data.clientEmail || data.clientPhone) {
+  // Actualizar datos del cliente si es necesario (solo para turnos normales)
+  if (
+    existingAppointment.clientId &&
+    (data.clientName || data.clientEmail || data.clientPhone)
+  ) {
     const clientUpdateData: Prisma.ClientUpdateInput = {};
 
     if (data.clientName) {
@@ -246,7 +255,7 @@ export async function updateAppointment(
     }
 
     await prisma.client.update({
-      where: { id: existingAppointment.clientId },
+      where: { id: existingAppointment.clientId! },
       data: clientUpdateData,
     });
   }

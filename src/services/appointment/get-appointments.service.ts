@@ -9,12 +9,13 @@ import {
   AppointmentResponseDTO,
   PaginatedAppointmentsDTO,
   PRISMA_STATUS_MAP,
+  PRISMA_TYPE_MAP,
   APPOINTMENT_STATUS_MAP,
 } from "../../types/appointment.types";
 import { Logger } from "../../utils/logger";
 
 /**
- * Tipo para el turno con todas las relaciones incluidas
+ * Tipo para el turno con todas las relaciones incluidas (nullable para bloqueos)
  */
 type AppointmentWithRelations = Appointment & {
   client: {
@@ -22,14 +23,14 @@ type AppointmentWithRelations = Appointment & {
     name: string;
     email: string | null;
     phone: string | null;
-  };
+  } | null;
   service: {
     id: string;
     externalId: string;
     name: string;
     duration: number;
     price: Prisma.Decimal | null;
-  };
+  } | null;
   professional: {
     id: string;
     externalId: string;
@@ -46,21 +47,26 @@ function toResponseDTO(
 ): AppointmentResponseDTO {
   return {
     id: appointment.id,
-    client: {
-      id: appointment.client.id,
-      name: appointment.client.name,
-      email: appointment.client.email,
-      phone: appointment.client.phone,
-    },
-    service: {
-      id: appointment.service.id,
-      externalId: appointment.service.externalId,
-      name: appointment.service.name,
-      duration: appointment.service.duration,
-      price: appointment.service.price
-        ? Number(appointment.service.price)
-        : null,
-    },
+    type: PRISMA_TYPE_MAP[appointment.type] || "appointment",
+    client: appointment.client
+      ? {
+          id: appointment.client.id,
+          name: appointment.client.name,
+          email: appointment.client.email,
+          phone: appointment.client.phone,
+        }
+      : null,
+    service: appointment.service
+      ? {
+          id: appointment.service.id,
+          externalId: appointment.service.externalId,
+          name: appointment.service.name,
+          duration: appointment.service.duration,
+          price: appointment.service.price
+            ? Number(appointment.service.price)
+            : null,
+        }
+      : null,
     professional: {
       id: appointment.professional.id,
       externalId: appointment.professional.externalId,
